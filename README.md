@@ -259,17 +259,17 @@ There are 3 arguments of `QueryBuilder` constructor:
 
     | Lookup | Behaviour | Example |
     | --- | --- | --- |
-    _(none)_ | Return entries that match with value | `foo: raul`
-    __contains__ | Return entries that contains value | `foo__contains: ryo`
-    __startswith__ | Return entries that starts with value | `foo__startswith: r`
-    __endswith__ | Return entries that ends with value | `foo__endswith: dev`
+    _(none)_ | Return entries that match with value | `foo: 'raul'`
+    __contains__ | Return entries that contains value | `foo__contains: 'ryo'`
+    __startswith__ | Return entries that starts with value | `foo__startswith: 'r'`
+    __endswith__ | Return entries that ends with value | `foo__endswith: 'dev'`
     __isnull__ | Return entries with null value | `foo__isnull`
     __lt__ | Return entries with value less than or equal to provided | `foo__lt: 18`
     __lte__ | Return entries with value less than provided | `foo__lte: 18`
     __gt__ | Returns entries with value greater than provided | `foo__gt: 18`
     __gte__ | Return entries with value greater than or equal to provided | `foo__gte: 18`
-    __in__ | Return entries that match with values in list | `foo__in=admin,common`
-    __between__ | Return entries in range | `foo__between=1,27`
+    __in__ | Return entries that match with values in list | `foo__in: 'admin,common'`
+    __between__ | Return entries in range | `foo__between: [1, 27]`
 
 * `Alias` - used to define alias for main table.
 
