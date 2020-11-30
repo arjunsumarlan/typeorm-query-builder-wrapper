@@ -15,7 +15,7 @@
 
 ## Features
 
-* Currently it very supports for SQL Database, especially PostgreSQL
+* Currently it supports for SQL Database, especially PostgreSQL
 * TypeScript and JavaScript support
 * Produced code is performant, flexible, clean and maintainable
 
@@ -68,27 +68,20 @@ Please visit [this](https://github.com/typeorm/typeorm#quick-start) to setup wha
 
 
 * [QueryBuilder](#querybuilder)
-* [What are aliases for?](#what-are-aliases-for)
-* [Using parameters to escape data](#using-parameters-to-escape-data)
+* [Instantiate a QueryBuilder](#instantiate-a-querybuilder)
+* [Adding `Filter` and `Pagination`](#adding-filter-and-pagination)
+* [Adding `SELECT` expression](#adding-select-expression)
 * [Adding `WHERE` expression](#adding-where-expression)
 * [Adding `HAVING` expression](#adding-having-expression)
-* [Adding `ORDER BY` expression](#adding-order-by-expression)
+* [Adding `DISTINCT ON` expression](#adding-distinct-on-expression)
 * [Adding `GROUP BY` expression](#adding-group-by-expression)
-* [Adding `LIMIT` expression](#adding-limit-expression)
-* [Adding `OFFSET` expression](#adding-offset-expression)
 * [Joining relations](#joining-relations)
 * [Inner and left joins](#inner-and-left-joins)
-* [Join without selection](#join-without-selection)
-* [Joining any entity or table](#joining-any-entity-or-table)
-* [Joining and mapping functionality](#joining-and-mapping-functionality)
 * [Getting the generated query](#getting-the-generated-query)
 * [Getting raw results](#getting-raw-results)
 * [Streaming result data](#streaming-result-data)
-* [Using pagination](#using-pagination)
 * [Set locking](#set-locking)
-* [Partial selection](#partial-selection)
 * [Using subqueries](#using-subqueries)
-* [Hidden Columns](#hidden-columns)
 
 ## `QueryBuilder`
 
