@@ -1,6 +1,6 @@
 {
   "name": "typeorm-query-builder-wrapper",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Easy Wrapper for TypeORM Query Builder",
   "license": "MIT",
   "scripts": {
