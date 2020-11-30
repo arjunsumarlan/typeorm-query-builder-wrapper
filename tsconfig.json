@@ -11,12 +11,12 @@
     "noLib": false,
     "allowJs": false,
     "skipLibCheck": true,
-    "outDir": "./dist",
+    "outDir": "./typeorm-query-builder-wrapper",
     "baseUrl": "./",
     "incremental": true
   },
   "include": [
-    "src/**/*",
+    "./**/*",
     "**/*.entity.ts"
   ],
   "exclude": [

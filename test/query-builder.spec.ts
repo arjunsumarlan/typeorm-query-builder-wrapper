@@ -1,4 +1,4 @@
-import { QueryBuilder } from '../src/query-builder';
+import { QueryBuilder } from '..';
 import { User } from './model/user.entity';
 
 describe('Test Query Builder', () => {
