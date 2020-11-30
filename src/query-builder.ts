@@ -214,6 +214,7 @@ export class QueryBuilder<
    * Get Query.
    */
   public getQuery(): string {
+    this.compileQueryBuilderParts();
     return this.qb.getQuery();
   }
   /**
@@ -256,8 +257,8 @@ export class QueryBuilder<
    */
   public selectSubQuery<JR extends Object>(
     entity: Constructor<P> | Function,
+    selectionAlias: string,
     selection: (qb: QueryBuilder<JR, P>) => QueryBuilder<any>,
-    selectionAlias?: string,
   ) {
     const initQueryBuilder = new QueryBuilder<JR, P>(
       entity,
@@ -390,7 +391,11 @@ export class QueryBuilder<
       const property = this.transformProperty(
         propertySelector,
       );
-      this.qb.addGroupBy(property);
+      if (args.indexOf(propertySelector) === 0) {
+        this.qb.groupBy(property);
+      } else {
+        this.qb.addGroupBy(property);
+      }
     }
 
     return this;
@@ -728,6 +733,8 @@ export class QueryBuilder<
    * @return {*} {QueryBuilder}
    */
   private applyOrder(alias?: string) {
+    if (!this.queryObject['order']) return this;
+
     const order = {};
     const orderFields = this.queryObject['order'].split(',');
     for (const field of orderFields) {
@@ -746,6 +753,30 @@ export class QueryBuilder<
           this.qb.addOrderBy(orderKey, orderObject[orderKey]);
         }
       }
+    }
+
+    return this;
+  }
+  /**
+   * Set Locking.
+   *
+   * @param type Type of Locking.
+   */
+  public setLocking(
+    type: 
+      "pessimistic_read" | "pessimistic_write"
+      | "dirty_read" | "pessimistic_partial_write"
+      | "pessimistic_write_or_fail" | "for_no_key_update"
+      | "optimistic",
+    version?: number,
+  ) {
+    if (type !== 'optimistic') {
+      this.qb.setLock(type);
+    } else {
+      if (!version) {
+        throw new Error("Version is not provided for optimistic locking");
+      }
+      this.qb.setLock(type, version);
     }
 
     return this;

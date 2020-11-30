@@ -36,7 +36,7 @@ describe('Test Query Builder', () => {
     );
     
     const query = qb.getQuery();
-    expect(query).toEqual(`SELECT "t1"."id" AS "id", "t1"."name" AS "name", "t1"."username" AS "username", "t1"."email" AS "email" FROM "public"."ptc_users" "t1" WHERE "t1"."name" = 'arju' AND "t1"."username" = 'arjunsumarlan' AND "t1"."create_date_time" >= '2020-11-15T00:00:00.000Z' AND "t1"."create_date_time" < '2020-11-25T00:00:00.000Z' ORDER BY "t1"."name" ASC LIMIT 10`);
+    expect(query).toEqual(`SELECT "t1"."id" AS "id", "t1"."name" AS "name", "t1"."username" AS "username", "t1"."email" AS "email" FROM "public"."ptc_users" "t1" WHERE "t1"."name" = 'arju' AND "t1"."username" = 'arjunsumarlan' AND "t1"."create_date_time" >= '2020-11-15T00:00:00.000Z' AND "t1"."create_date_time" < '2020-11-25T00:00:00.000Z' AND "t1"."is_deleted" = 'false' ORDER BY "t1"."name" ASC LIMIT 10`);
   });
   it('should get a query with WHERE to deep relation', () => {
     // TODO: Test
