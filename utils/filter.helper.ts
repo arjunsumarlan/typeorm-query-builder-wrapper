@@ -10,6 +10,7 @@ import {
   LookupFilterSymbol,
   OPERATOR,
 } from '../constants/filter.constant';
+import { isArray } from 'class-validator';
 
 export class FilterHelper {
   public static getOperator(key: string) {
@@ -48,96 +49,15 @@ export class FilterHelper {
 
     return LookupFilter.MATCHES;
   }
-
-  /**
-   * Apply Operator for Filter
-   *
-   * @param queryBuilder Select Query Builder
-   * @param key Field
-   * @param value Value
-   * @param opt Operator
-   */
-  public static applyOperatorCondition(
-    queryBuilder: SelectQueryBuilder<any>,
-    key: string,
-    value: any,
-    opt: string,
-  ): SelectQueryBuilder<any> {
-    switch (opt) {
-      case LookupFilter.CONTAINS:
-        queryBuilder.andWhere(`${key} LIKE '%${value}%'`);
-        break;
-      case LookupFilter.I_CONTAINS:
-        queryBuilder.andWhere(`${key} ILIKE '%${value}%'`);
-        break;
-      case LookupFilter.STARTS_WITH:
-        queryBuilder.andWhere(`${key} LIKE '${value}%'`);
-        break;
-      case LookupFilter.I_STARTS_WITH:
-        queryBuilder.andWhere(`${key} ILIKE '${value}%'`);
-        break;
-      case LookupFilter.ENDS_WITH:
-        queryBuilder.andWhere(`${key} LIKE '%${value}'`);
-        break;
-      case LookupFilter.I_ENDS_WITH:
-        queryBuilder.andWhere(`${key} ILIKE '%${value}'`);
-        break;
-      case LookupFilter.IS_NULL:
-        queryBuilder.andWhere(`${key} IS NULL`);
-        break;
-      case LookupFilter.LT:
-        queryBuilder.andWhere(`${key} < '${value}'`);
-        break;
-      case LookupFilter.LTE:
-        queryBuilder.andWhere(`${key} <= '${value}'`);
-        break;
-      case LookupFilter.GT:
-        queryBuilder.andWhere(`${key} > '${value}'`);
-        break;
-      case LookupFilter.GTE:
-        queryBuilder.andWhere(`${key} >= '${value}'`);
-        break;
-      case LookupFilter.IN:
-        queryBuilder.andWhere(`${key} IN ('${value}')`);
-        break;
-      case LookupFilter.BETWEEN:
-        queryBuilder.andWhere(`${key} BETWEEN '${value[0]}' AND '${value[1]}'`);
-        break;
-      case LookupFilter.NOT_EQUAL:
-        queryBuilder.andWhere(`${key} <> '${value}'`);
-        break;
-      default:
-        queryBuilder.andWhere(`${key} = '${value}'`);
-        break;
-    }
-
-    return queryBuilder;
-  }
 }
 
 export class QueryConditionService<T> {
-  get or() {
-    this.whereQueryBuilderFn = 'OR';
-
-    return this;
-  }
-
-  get and() {
-    this.whereQueryBuilderFn = 'AND';
-
-    return this;
-  }
-
   constructor(
     public prop: QueryComparableProp,
     public queryBuilder: SelectQueryBuilder<T>,
     public queryBuilderParts: Array<QueryBuilderPart<T>>,
     private whereQueryBuilderFn?: '' | 'AND' | 'OR',
-  ) {
-    if (!whereQueryBuilderFn) {
-      this.whereQueryBuilderFn = '';
-    }
-  }
+  ) {}
 
   public beginsWith(value: string, insensitive: boolean = false) {
     return this.completeWhere(OPERATOR.SQL.OPERATOR_LIKE, value, {
@@ -160,6 +80,15 @@ export class QueryConditionService<T> {
     });
   }
 
+  public equalsWithField(value: string) {
+    const selectors = value.split('.');
+    if (selectors.length > 2) {
+      throw new Error('Argument is not a field in equalsWithField method.');
+    }
+
+    return this.completeWhere(OPERATOR.SQL.OPERATOR_EQUAL, value, { quoteString: false });
+  }
+
   public equals(value: string | number | boolean | Date) {
     return this.completeWhere(OPERATOR.SQL.OPERATOR_EQUAL, value, null);
   }
@@ -175,7 +104,19 @@ export class QueryConditionService<T> {
     );
   }
 
-  public in(include: string[] | number[]) {
+  public in(include: string[] | number[] | string) {
+    if (typeof include === 'string') {
+      return this.completeWhere(
+        OPERATOR.SQL.OPERATOR_IN,
+        include,
+        { quoteString: false },
+      );
+    }
+
+    if (isArray(include) && include.length === 0) {
+      throw new Error('Argument of IN have to be non-empty array.')
+    }
+
     // If comparing strings, must escape them as strings in the query.
     this.escapeStringArray(castArray(include as string[]));
 
@@ -228,7 +169,19 @@ export class QueryConditionService<T> {
     );
   }
 
-  public notIn(exclude: string[] | number[]) {
+  public notIn(exclude: string[] | number[] | string) {
+    if (typeof exclude === 'string') {
+      return this.completeWhere(
+        OPERATOR.SQL.OPERATOR_NOT_IN,
+        exclude,
+        { quoteString: false },
+      );
+    }
+
+    if (isArray(exclude) && exclude.length === 0) {
+      throw new Error('Argument of NOT IN have to be non-empty array.')
+    }
+
     // If comparing strings, must escape them as strings in the query.
     this.escapeStringArray(castArray(exclude as string[]));
 
