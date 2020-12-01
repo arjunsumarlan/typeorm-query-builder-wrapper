@@ -9,6 +9,7 @@ import {
   QueryPropsDef,
 } from './model/repository.model';
 import { ReadStream } from 'typeorm/platform/PlatformTools';
+import { LookupFilter } from './constants/filter.constant';
 
 const UNDEFINED_CONST = undefined;
 
@@ -21,7 +22,7 @@ export class QueryBuilder<
   constructor(
     private entityType: Constructor<T> | string | Function,
     private queryObject,
-    entityAlias?: string,
+    entityAlias: string,
   ) {
     if (!queryObject.isDeleted) {
       queryObject.isDeleted = 'false';
@@ -35,8 +36,6 @@ export class QueryBuilder<
 
     if (entityAlias) {
       this.qb = createQueryBuilder(entityType, entityAlias);
-    } else {
-      this.qb = createQueryBuilder(entityType);
     }
   }
 
@@ -289,7 +288,7 @@ export class QueryBuilder<
     );
     if (subQuery) {
       const queryBuilder = subQuery(initQueryBuilder);
-      this.qb.from(`(${queryBuilder.qb})`, aliasName);
+      this.qb.from(`(${queryBuilder.getQuery()})`, aliasName);
     } else {
       this.qb.from(entity, aliasName);
     }
@@ -299,11 +298,14 @@ export class QueryBuilder<
   /**
    * Create Sub Query.
    */
-  private createSubQuery() {
+  private createSubQuery(isMain: boolean = false) {
     const queryBuilder: SelectQueryBuilder<T> = this.qb
       .createQueryBuilder()
       .subQuery()
-      .from(this.entityType, this.qb.alias);
+    
+    if (isMain) {
+      queryBuilder.from(this.entityType, this.qb.alias);
+    }
 
     const query = new QueryBuilder<T, T>(
       this.entityType,
@@ -315,32 +317,23 @@ export class QueryBuilder<
 
     return query;
   }
-
-  // TODO: WHERE SUB QUERY
-  //
-  // ....
-
-  // TODO: JOIN SUB QUERY
-  //
-  // ....
-
   /**
    * Sets whether the selection is DISTINCT.
-   * NOTE: Remember set distinct after joining your relation.
+   * Remember set distinct after joining your relation.
    *
    * @param {boolean} distinct Is Distinct argument.
    */
   public setDistinct(distinct?: boolean) {
-    this.qb.distinct(distinct);
+    this.qb.distinct(distinct ? distinct : true);
     return this;
   }
   /**
    * Sets the distinct on clause for Postgres.
-   * NOTE: Remember set distinct after joining your relation.
+   * Remember set distinct after joining your relation.
    *
    * @param args Array of field to set distinct on them.
    */
-  public async setDistinctOn(
+  public setDistinctOn(
     ...args: Array<((obj: P) => any) | string>
   ) {
     if (!args.length) {
@@ -372,7 +365,7 @@ export class QueryBuilder<
    *
    * @param args Array of field to set distinct on them.
    */
-  public async groupBy(
+  public groupBy(
     ...args: Array<((obj: P) => any) | string>
   ) {
     if (!args.length) {
@@ -425,7 +418,7 @@ export class QueryBuilder<
     conditions: (query: QueryBuilder<T, P>) => QueryBuilder<T, P>,
     conditionFn: '' | 'AND' | 'OR',
   ) {
-    const query = this.createSubQuery();
+    const query = this.createSubQuery(true);
     query.joinHistory = this.joinHistory;
     const queryBuilder = conditions(query);
     const whereConditionParts = queryBuilder.queryBuilderParts;
@@ -461,7 +454,7 @@ export class QueryBuilder<
    */
   public andWhere(
     propertySelector: ((obj: P) => QueryComparableProp) | string,
-    whereFn: (queryCondition: QueryConditionService<T>) => void,
+    whereFn: (queryCondition: QueryConditionService<T>, subQuery?: QueryBuilder<T, P>) => void,
   ) {
     whereFn(
       new QueryConditionService<T>(
@@ -470,6 +463,7 @@ export class QueryBuilder<
         this.queryBuilderParts,
         'AND',
       ),
+      this.createSubQuery(),
     );
 
     return this;
@@ -490,7 +484,7 @@ export class QueryBuilder<
    */
   public orWhere(
     propertySelector: ((obj: P) => QueryComparableProp) | string,
-    whereFn: (queryCondition: QueryConditionService<T>) => void,
+    whereFn: (queryCondition: QueryConditionService<T>, subQuery?: QueryBuilder<T, P>) => void,
   ) {
     whereFn(
       new QueryConditionService<T>(
@@ -499,6 +493,7 @@ export class QueryBuilder<
         this.queryBuilderParts,
         'OR',
       ),
+      this.createSubQuery(),
     );
 
     return this;
@@ -666,6 +661,81 @@ export class QueryBuilder<
     return this.applyJoin(propertySelector, joinAlias, 'LEFT', joinCondition);
   }
   /**
+   * Apply Join
+   *
+   * @param propertySelector Property Selector.
+   * @param joinAlias Alias for relation table.
+   * @param joinQueryBuilderFn Type of Join.
+   * @param joinCondition Condition when join.
+   */
+  private applyJoinSubQuery(
+    subQuery: SelectQueryBuilder<T>,
+    joinAlias: string,
+    joinQueryBuilderFn: 'INNER' | 'LEFT',
+    joinCondition?: (qb: QueryBuilder<T, P>) => QueryBuilder<T, P>,
+  ) {
+    if (joinCondition && typeof joinCondition === 'function') {
+      const qb = joinCondition(this.createSubQuery(true));
+      let condition = '';
+      if (qb.queryBuilderParts) {
+        for (const part of qb.queryBuilderParts) {
+          const condWhere = part.partParams[0];
+          const whereQueryBuilderFn = part.partAction[0];
+          if (qb.queryBuilderParts.indexOf(part) === 0) {
+            condition += condWhere;
+          } else {
+            condition += ` ${whereQueryBuilderFn} ${condWhere}`;
+          }
+        }
+      }
+      if (condition) {
+        if (joinQueryBuilderFn === 'INNER') {
+          this.qb.innerJoin(sb => subQuery, joinAlias, condition);
+        } else {
+          this.qb.leftJoin(sb => subQuery, joinAlias, condition);
+        }
+      }
+    } else {
+      if (joinQueryBuilderFn === 'INNER') {
+        this.qb.innerJoin(sb => subQuery, joinAlias);
+      } else {
+        this.qb.leftJoin(sb => subQuery, joinAlias);
+      }
+    }
+
+    return this;
+  }
+  /**
+   * Inner Join Sub Query
+   *
+   * @param subQuery Property Selector.
+   * @param joinAlias Alias for relation table.
+   * @param joinCondition Condition when join.
+   */
+  public innerJoinSubQuery<JR extends Object>(
+    subQuery: ((qb: QueryBuilder<T, P>) => QueryBuilder<T, P>),
+    joinAlias: string,
+    joinCondition?: (qb: QueryBuilder<JR, P>) => QueryBuilder<JR, P>,
+  ) {
+    const queryBuilder = subQuery(this.createSubQuery())
+    return this.applyJoinSubQuery(queryBuilder.qb, joinAlias, 'INNER', joinCondition);
+  }
+  /**
+   * Left Join Sub Query
+   *
+   * @param subQuery Property Selector.
+   * @param joinAlias Alias for relation table.
+   * @param joinCondition Condition when join.
+   */
+  public leftJoinSubQuery<JR extends Object>(
+    subQuery: ((qb: QueryBuilder<T, P>) => QueryBuilder<T, P>),
+    joinAlias: string,
+    joinCondition?: (qb: QueryBuilder<JR, P>) => QueryBuilder<JR, P>,
+  ) {
+    const queryBuilder = subQuery(this.createSubQuery())
+    return this.applyJoinSubQuery(queryBuilder.qb, joinAlias, 'LEFT', joinCondition);
+  }
+  /**
    * Apply Query Builder with Filter and Pagination.
    *
    * @param {any} query Query params.
@@ -789,20 +859,58 @@ export class QueryBuilder<
    */
   public applyFilterQueries() {
     const { fieldResolverMap, queryObject } = this;
-    if (!fieldResolverMap) {
-      throw new Error('fields are not mapped yet.');
-    }
-
     if (fieldResolverMap) {
       mapKeys(fieldResolverMap, (field, key) => {
         if (queryObject[key]) {
           const operator = FilterHelper.getOperator(key);
-          FilterHelper.applyOperatorCondition(
-            this.qb,
-            field,
-            queryObject[key],
-            operator,
-          );
+          const value = queryObject[key];
+          switch (operator) {
+            case LookupFilter.CONTAINS:
+              this.qb.andWhere(`${field} LIKE '%${value}%'`);
+              break;
+            case LookupFilter.I_CONTAINS:
+              this.qb.andWhere(`${field} ILIKE '%${value}%'`);
+              break;
+            case LookupFilter.STARTS_WITH:
+              this.qb.andWhere(`${field} LIKE '${value}%'`);
+              break;
+            case LookupFilter.I_STARTS_WITH:
+              this.qb.andWhere(`${field} ILIKE '${value}%'`);
+              break;
+            case LookupFilter.ENDS_WITH:
+              this.qb.andWhere(`${field} LIKE '%${value}'`);
+              break;
+            case LookupFilter.I_ENDS_WITH:
+              this.qb.andWhere(`${field} ILIKE '%${value}'`);
+              break;
+            case LookupFilter.IS_NULL:
+              this.qb.andWhere(`${field} IS NULL`);
+              break;
+            case LookupFilter.LT:
+              this.qb.andWhere(`${field} < '${value}'`);
+              break;
+            case LookupFilter.LTE:
+              this.qb.andWhere(`${field} <= '${value}'`);
+              break;
+            case LookupFilter.GT:
+              this.qb.andWhere(`${field} > '${value}'`);
+              break;
+            case LookupFilter.GTE:
+              this.qb.andWhere(`${field} >= '${value}'`);
+              break;
+            case LookupFilter.IN:
+              this.qb.andWhere(`${field} IN ('${value}')`);
+              break;
+            case LookupFilter.BETWEEN:
+              this.qb.andWhere(`${field} BETWEEN '${value[0]}' AND '${value[1]}'`);
+              break;
+            case LookupFilter.NOT_EQUAL:
+              this.qb.andWhere(`${field} <> '${value}'`);
+              break;
+            default:
+              this.qb.andWhere(`${field} = '${value}'`);
+              break;
+          }
         }
       });
     }
