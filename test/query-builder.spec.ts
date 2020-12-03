@@ -286,6 +286,51 @@ describe('Test Query Builder', () => {
     const query = qb.getQuery();
     expect(query).toEqual(QueryList.FILTER_PAGINATION);
   });
+  it('should get an error when give empty string for property selector in LEFT expression', async () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
+      .leftJoin(
+        '',
+        't2',
+      );
+    } catch (error) {
+      expect(error.message).toEqual(`Property Selector not defined.`);
+    }
+  });
+  it('should get an error when give empty string for property selector in WHERE expression', async () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
+      .leftJoin(
+        e => e.photos,
+        't2',
+        j => j.andWhere(
+          '',
+          w => w.isNotNull(),
+        ),
+      );
+    } catch (error) {
+      expect(error.message).toEqual(`Property Selector not provided.`);
+    }
+  });
+  it('should get an error when JOIN unrelated table with main table', async () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
+      .leftJoin(
+        't1.photos',
+        't2',
+        j => j.andWhere(
+          't2.is_delete',
+          w => w.isFalse(),
+        ),
+      );
+      console.log(qb.getQuery())
+    } catch (error) {
+      expect(error.message).toEqual(`User does not have relation with branches`);
+    }
+  });
   it('should get an error when prefix in order does not provided', async () => {
     try {
       // Create Query Builder
