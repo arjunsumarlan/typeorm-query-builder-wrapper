@@ -1,0 +1,1 @@
+## This is a Sample of TypeORM Query Builder Wrapper

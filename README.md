@@ -836,13 +836,85 @@ qb.from(User, 'user', subQuery => {
 });
 ```
 
-Currentyly, `JOIN` and `WHERE` query does not support for Sub Query.
+example for `WHERE`:
+
+```typescript
+qb.from(User, 'user', subQuery => {
+    return subQuery.selectRaw(
+      ['t1.id', 'id'],
+      ['t1.username', 'username'],
+    ).andWhere(
+      e => e.username,
+      (w, subQuery) => {
+        w.in(
+          subQuery
+            .selectRaw(['user.username', 'username'])
+            .from(User, 'user')
+            .andWhere(
+              e => e.isDeleted,
+              w => w.isFalse(),
+            )
+            .getQuery()
+        )
+      },
+    ).orWhere(
+      e => e.username,
+      (w, subQuery) => {
+        w.notIn(
+          subQuery
+            .selectRaw(['user.username', 'username'])
+            .from(User, 'user')
+            .andWhere(
+              e => e.isDeleted,
+              w => w.isFalse(),
+            )
+            .getQuery()
+        )
+      },
+    );
+});
+```
+
+example for `JOIN`:
+
+```typescript
+qb.from(User, 'user', subQuery => {
+    return subQuery.selectRaw(
+      ['t1.id', 'id'],
+      ['t1.name', 'name'],
+      ['t2.branchName', 'branch'],
+    )
+    .innerJoinSubQuery(
+      subQuery => {
+        return subQuery
+          .selectRaw(
+            ['branch.user_id', 'userId'],
+            ['branch.branch_name', 'branchName'],
+          )
+          .from(Branch, 'branch')
+          .andWhere(
+            e => e.isDeleted,
+            w => w.isFalse(),
+          )
+      },
+      't2',
+      j => j.andWhere(
+        't2.userId',
+        w => w.equalsWithField('t1.id'),
+      )
+    );
+});
+```
+
+## TODOS:
+
+* Support for MongoDB and other DB
+* Support for GraphQL
+* 
 
 ## Samples
 
 Take a look at the samples in [sample](https://github.com/arjunsumarlan/typeorm-query-builder-wrapper/tree/master/sample) for examples of usage.
-
-....
 
 
 ## Contributing
