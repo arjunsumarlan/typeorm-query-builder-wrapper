@@ -1,5 +1,5 @@
 import { mapKeys, snakeCase } from 'lodash';
-import { createQueryBuilder, EntityTarget, SelectQueryBuilder } from 'typeorm';
+import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
 import { FilterHelper, QueryConditionService } from './utils/filter.helper';
 import { isNum, isUniqueFields } from './utils/common.helper';
 import { isArray, isString } from 'class-validator';
@@ -21,19 +21,15 @@ export class QueryBuilder<
 > {
   constructor(
     private entityType: Constructor<T> | string | Function,
-    private queryObject,
     entityAlias: string,
+    private queryObject?,
   ) {
-    if (!queryObject.isDeleted) {
-      queryObject.isDeleted = 'false';
-    }
-    if (queryObject.page && isNum(queryObject.page)) {
+    if (queryObject && queryObject.page && isNum(queryObject.page)) {
       this.page = Number(queryObject.page);
     }
-    if (queryObject.limit && isNum(queryObject.limit)) {
+    if (queryObject && queryObject.limit && isNum(queryObject.limit)) {
       this.limit = Number(queryObject.limit);
     }
-
     if (entityAlias) {
       this.qb = createQueryBuilder(entityType, entityAlias);
     }
@@ -245,8 +241,8 @@ export class QueryBuilder<
   ) {
     const initQueryBuilder = new QueryBuilder<JR, P>(
       entity,
-      {},
       selectionAlias,
+      {},
     );
     const queryBuilder = selection(initQueryBuilder);
     this.qb.addSelect(`(${queryBuilder.qb.getQuery()})`, selectionAlias);
@@ -267,8 +263,8 @@ export class QueryBuilder<
   ) {
     const initQueryBuilder = new QueryBuilder<JR, P>(
       entity,
-      {},
       aliasName,
+      {},
     );
     if (subQuery) {
       const queryBuilder = subQuery(initQueryBuilder);
@@ -582,8 +578,8 @@ export class QueryBuilder<
       const RelationEntityType = etyMetadata.target;
       const queryBuilder = new QueryBuilder<JR, P>(
         RelationEntityType,
-        {},
         joinAlias,
+        {},
       );
       queryBuilder.joinHistory = this.joinHistory;
       const qb = joinCondition(queryBuilder);

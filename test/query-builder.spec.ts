@@ -243,7 +243,7 @@ describe('Test Helper', () => {
 describe('Test Query Builder', () => {
   it('should get a query with an pagination & filters', () => {
     // Create Query Builder
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
       order: '^name,-email',
@@ -262,7 +262,7 @@ describe('Test Query Builder', () => {
       createDateTime__lt: '2020-11-25T00:00:00.000Z',
       createDateTime__gt: '2020-11-15T00:00:00.000Z',
       createDateTime__lte: '2020-11-25T00:00:00.000Z',
-    }, 't1');
+    });
 
     // Mapping filter field (Whitelist) (REQUIRED for filters).
     qb.fieldResolverMap['name__matches'] = 't1.name';
@@ -302,7 +302,7 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when give empty string for property selector in LEFT expression', async () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
       .leftJoin(
         '',
@@ -314,7 +314,7 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when give empty string for property selector in WHERE expression', async () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
       .leftJoin(
         e => e.photos,
@@ -330,7 +330,7 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when JOIN unrelated table with main table', async () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
       .leftJoin(
         't1.branch',
@@ -348,11 +348,11 @@ describe('Test Query Builder', () => {
   it('should get an error when prefix in order does not provided', async () => {
     try {
       // Create Query Builder
-      const qb = new QueryBuilder(User, {
+      const qb = new QueryBuilder(User, 't1', {
         page: 1,
         limit: 10,
         order: 'name',
-      }, 't1');
+      });
 
       // Have to be after mapping.
       qb.applyFilterPagination();
@@ -366,10 +366,10 @@ describe('Test Query Builder', () => {
     }
   });
   it('should get a query with Isolated WHERE', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -399,20 +399,20 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when args does not provided in Select', () => {
     try {
-      const qb = new QueryBuilder(User, {
+      const qb = new QueryBuilder(User, 't1', {
         page: 1,
         limit: 10,
-      }, 't1')
+      })
       .selectRaw();
     } catch (error) {
       expect(error.message).toEqual('String expression is required for the selectRaw method');
     }
   });
   it('should get a query when args provided in string type in Select', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id'],
       ['t1.name'],
@@ -421,10 +421,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.ERROR_SELECT);
   });
   it('should get a query with adding a FROM query', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -436,10 +436,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.ADD_FROM);
   });
   it('should set distinct on query', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -452,10 +452,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.DISTINCT);
   });
   it('should set distinct on field(s) in query', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -469,10 +469,10 @@ describe('Test Query Builder', () => {
   });
   it('should set distinct on field(s) will error if properties does not provided', async () => {
     try {
-      new QueryBuilder(User, {
+      new QueryBuilder(User, 't1', {
         page: 1,
         limit: 10,
-      }, 't1')
+      })
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.name', 'name'],
@@ -486,7 +486,7 @@ describe('Test Query Builder', () => {
   });
   it('should set distinct on field(s) will error if properties are duplicated', async () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.name', 'name'],
@@ -501,7 +501,7 @@ describe('Test Query Builder', () => {
   });
   it('should set distinct on field(s) will error if properties are duplicated with string props', async () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.name', 'name'],
@@ -515,10 +515,10 @@ describe('Test Query Builder', () => {
     }
   });
   it('should get a query with HAVING', () => {
-    const qb = new QueryBuilder(Photos, {
+    const qb = new QueryBuilder(Photos, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.filename', 'name'],
@@ -535,10 +535,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.HAVING);
   });
   it('should get a query by getSql', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -556,10 +556,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.LEFT_JOIN);
   });
   it('should get data by exec', async () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.username', 'username'],
@@ -570,10 +570,10 @@ describe('Test Query Builder', () => {
     expect(isArray(data)).toBeTruthy();
   });
   it('should get data by exec with optimistic locking', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.username', 'username'],
@@ -585,10 +585,10 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when version number does not provided when optimistic locking', async () => {
     try {
-      const qb = new QueryBuilder(User, {
+      const qb = new QueryBuilder(User, 't1', {
         page: 1,
         limit: 10,
-      }, 't1')
+      })
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.username', 'username'],
@@ -599,10 +599,10 @@ describe('Test Query Builder', () => {
     }
   });
   it('should get a query with LEFT JOIN', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -620,10 +620,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.LEFT_JOIN);
   });
   it('should get a query with LEFT JOIN using Raw', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -634,10 +634,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.LEFT_JOIN_RAW);
   });
   it('should get a query with INNER JOIN', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -655,10 +655,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.INNER_JOIN);
   });
   it('should get a query with INNER JOIN using Raw', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -669,10 +669,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.INNER_JOIN_RAW);
   });
   it('should get a query with WHERE to deep relation', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -693,10 +693,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.DEEP_RELATION_WHERE);
   });
   it('should get a query with JOIN and multiple condition', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -717,10 +717,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.MULTI_CONDITION_JOIN);
   });
   it('should get a query with JOIN to deep relation which not related to parent table', () => {
-    const qb = new QueryBuilder(Branch, {
+    const qb = new QueryBuilder(Branch, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.branch_name', 'branchName'],
@@ -749,7 +749,7 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.DEEP_RELATION_JOIN);
   });
   it('should get a query with GROUP BY', () => {
-    const qb = new QueryBuilder(User, {}, 't1')
+    const qb = new QueryBuilder(User, 't1')
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -762,7 +762,7 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when query with GROUP BY but property selector does not provided', () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.name', 'name'],
@@ -774,7 +774,7 @@ describe('Test Query Builder', () => {
     }
   });
   it('should get a query with Multiple GROUP BY', () => {
-    const qb = new QueryBuilder(User, {}, 't1')
+    const qb = new QueryBuilder(User, 't1')
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -788,7 +788,7 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when query with GROUP BY but property selector are duplicated', () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.name', 'name'],
@@ -804,7 +804,7 @@ describe('Test Query Builder', () => {
   });
   it('should get an error when query with GROUP BY but property selector are duplicated with string props', () => {
     try {
-      const qb = new QueryBuilder(User, {}, 't1')
+      const qb = new QueryBuilder(User, 't1')
       .selectRaw(
         ['t1.id', 'id'],
         ['t1.name', 'name'],
@@ -819,7 +819,7 @@ describe('Test Query Builder', () => {
     }
   });
   it('should get a query with sub query in SELECT', () => {
-    const qb = new QueryBuilder(User, {}, 't1')
+    const qb = new QueryBuilder(User, 't1')
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -834,7 +834,7 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.SELECT_SUB_QUERY);
   });
   it('should get a query with sub query in FROM', () => {
-    const qb = new QueryBuilder(User, {}, 't1')
+    const qb = new QueryBuilder(User, 't1')
     .selectRaw(
       ['t1.id', 'id'],
       ['photo.fileName', 'name'],
@@ -849,7 +849,7 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.FROM_SUB_QUERY);
   });
   it('should get a query with sub query in WHERE', () => {
-    const qb = new QueryBuilder(User, {}, 't1')
+    const qb = new QueryBuilder(User, 't1')
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -891,10 +891,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.WHERE_SUB_QUERY);
   });
   it('should get a query with sub query in INNER JOIN with condition', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -924,10 +924,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.INNER_JOIN_SUB_QUERY_WITH_CONDITION);
   });
   it('should get a query with sub query in INNER JOIN without condition', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -953,10 +953,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.INNER_JOIN_SUB_QUERY);
   });
   it('should get a query with sub query in LEFT JOIN without condition', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -982,10 +982,10 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.LEFT_JOIN_SUB_QUERY_WITHOUT_CONDITION);
   });
   it('should get a query with sub query in LEFT JOIN', () => {
-    const qb = new QueryBuilder(User, {
+    const qb = new QueryBuilder(User, 't1', {
       page: 1,
       limit: 10,
-    }, 't1')
+    })
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
@@ -1019,7 +1019,7 @@ describe('Test Query Builder', () => {
     expect(query).toEqual(QueryList.LEFT_JOIN_SUB_QUERY);
   });
   it('should get a type of number for Aggregate Function (COUNT, MAX, MIN, AVG, and SUM)', async () => {
-    const qb = new QueryBuilder(User, {}, 't1')
+    const qb = new QueryBuilder(User, 't1')
     .selectRaw(
       ['t1.id', 'id'],
       ['t1.username', 'username'],
@@ -1120,7 +1120,7 @@ describe('Test Query Builder', () => {
     expect(isNum(manySum && manySum.pointSum) && isNum(manySum && manySum.followerSum)).toBeTruthy();
   });
   it('should get a type of number for Aggregate Function with deep relation', async () => {
-    const qb = new QueryBuilder(Branch, {}, 't1')
+    const qb = new QueryBuilder(Branch, 't1')
     .selectRaw(
       ['t1.id', 'id'],
     ).leftJoin(
