@@ -1,5 +1,6 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToMany, JoinTable, } from 'typeorm';
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToMany, JoinTable, UpdateDateColumn, } from 'typeorm';
 import { Photos } from './photos.entity';
+import { ColumnNumericTransformer } from './utils/transformer';
 
 @Entity('ptc_users')
 export class User extends BaseEntity {
@@ -14,6 +15,12 @@ export class User extends BaseEntity {
     name: 'create_date_time',
   })
   createDateTime: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    name: 'update_date_time',
+  })
+  updateDateTime: Date;
 
   @Column('character varying', {
     nullable: false,
@@ -43,6 +50,24 @@ export class User extends BaseEntity {
     name: 'email',
   })
   email: string | null;
+
+  @Column('numeric', {
+    nullable: false,
+    name: 'point',
+  })
+  point: number;
+
+  @Column('numeric', {
+    nullable: false,
+    name: 'follower',
+  })
+  follower: number;
+
+  @Column('numeric', {
+    nullable: false,
+    name: 'following',
+  })
+  following: number;
 
   @ManyToMany(() => Photos, { cascade: true })
   @JoinTable()

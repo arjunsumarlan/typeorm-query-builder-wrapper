@@ -259,7 +259,7 @@ There are 3 arguments of `QueryBuilder` constructor:
 
     | Lookup | Behaviour | Example |
     | --- | --- | --- |
-    _(none)_ | Return entries that match with value | `foo: 'raul'`
+    __matches__ | Return entries that match with value | `foo: 'raul'`
     __contains__ | Return entries that contains value | `foo__contains: 'ryo'`
     __startswith__ | Return entries that starts with value | `foo__startswith: 'r'`
     __endswith__ | Return entries that ends with value | `foo__endswith: 'dev'`

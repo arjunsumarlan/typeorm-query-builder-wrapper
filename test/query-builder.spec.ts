@@ -1,11 +1,12 @@
 import { QueryBuilder } from '..';
 import { QueryBuilderPart } from '../model/repository.model';
-import { isUniqueFields } from '../utils/common.helper';
+import { isNum, isUniqueFields } from '../utils/common.helper';
 import { FilterHelper, QueryConditionService } from '../utils/filter.helper';
 import { User } from './model/user.entity';
 import { Branch } from './model/branch.entity';
 import { QueryList } from './query-list';
 import { Photos } from './model/photos.entity';
+import { isArray } from 'class-validator';
 
 function getMockQueryCondition(prop) {
   return new QueryConditionService(
@@ -18,11 +19,11 @@ function getMockQueryCondition(prop) {
 describe('Test Helper', () => {
   it('should get a false, is an array unique', () => {
     const arr = [0, 1, 1, 2];
-    expect(isUniqueFields(arr)).toEqual(false);
+    expect(isUniqueFields(arr)).toBeFalsy();
   });
   it('should get a true, is an array unique', () => {
     const arr = [0, 1, 2, 3];
-    expect(isUniqueFields(arr)).toEqual(true);
+    expect(isUniqueFields(arr)).toBeTruthy();
   });
   it('should get an operator "like" with "__contains" end', () => {
     const operator = FilterHelper.getOperator("name__contains");
@@ -246,6 +247,7 @@ describe('Test Query Builder', () => {
       page: 1,
       limit: 10,
       order: '^name,-email',
+      name__matches: 'roy',
       name__contains: 'roy',
       name__endswith: 'roy',
       name__startswith: 'roy',
@@ -253,11 +255,17 @@ describe('Test Query Builder', () => {
       name__iendswith: 'roy',
       name__istartswith: 'roy',
       username__isnull: 'true',
+      name__in: 'roy,martin',
+      point__between: [1, 2],
+      name__notequal: 'yor',
       createDateTime__gte: '2020-11-15T00:00:00.000Z',
       createDateTime__lt: '2020-11-25T00:00:00.000Z',
+      createDateTime__gt: '2020-11-15T00:00:00.000Z',
+      createDateTime__lte: '2020-11-25T00:00:00.000Z',
     }, 't1');
 
     // Mapping filter field (Whitelist) (REQUIRED for filters).
+    qb.fieldResolverMap['name__matches'] = 't1.name';
     qb.fieldResolverMap['name__contains'] = 't1.name';
     qb.fieldResolverMap['name__endswith'] = 't1.name';
     qb.fieldResolverMap['name__startswith'] = 't1.name';
@@ -265,8 +273,13 @@ describe('Test Query Builder', () => {
     qb.fieldResolverMap['name__iendswith'] = 't1.name';
     qb.fieldResolverMap['name__istartswith'] = 't1.name';
     qb.fieldResolverMap['username__isnull'] = 't1.username';
+    qb.fieldResolverMap['name__in'] = 't1.name';
+    qb.fieldResolverMap['name__notequal'] = 't1.name';
+    qb.fieldResolverMap['point__between'] = 't1.point';
     qb.fieldResolverMap['createDateTime__gte'] = 't1.create_date_time';
     qb.fieldResolverMap['createDateTime__lt'] = 't1.create_date_time';
+    qb.fieldResolverMap['createDateTime__gt'] = 't1.create_date_time';
+    qb.fieldResolverMap['createDateTime__lte'] = 't1.create_date_time';
 
     // Have to be after mapping.
     qb.applyFilterPagination();
@@ -274,6 +287,7 @@ describe('Test Query Builder', () => {
     qb.selectRaw(
       ['t1.id', 'id'],
       ['t1.name', 'name'],
+      ['t1.point', 'point'],
       ['t1.username', 'username'],
       ['t1.email', 'email'],
     );
@@ -319,16 +333,16 @@ describe('Test Query Builder', () => {
       const qb = new QueryBuilder(User, {}, 't1')
       .selectRaw(['t1.id', 'id'], ['t2.url', 'url'])
       .leftJoin(
-        't1.photos',
+        't1.branch',
         't2',
         j => j.andWhere(
           't2.is_delete',
           w => w.isFalse(),
         ),
       );
-      console.log(qb.getQuery())
+
     } catch (error) {
-      expect(error.message).toEqual(`User does not have relation with branches`);
+      expect(error.message).toEqual(`User does not have relation with branch`);
     }
   });
   it('should get an error when prefix in order does not provided', async () => {
@@ -485,6 +499,21 @@ describe('Test Query Builder', () => {
       expect(error.message).toEqual('Fields have to be unique in setDistinctOn');
     }
   });
+  it('should set distinct on field(s) will error if properties are duplicated with string props', async () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(
+        ['t1.id', 'id'],
+        ['t1.name', 'name'],
+      )
+      .setDistinctOn(
+        't1.name',
+        't1.name',
+      );
+    } catch (error) {
+      expect(error.message).toEqual('Fields have to be unique in setDistinctOn');
+    }
+  });
   it('should get a query with HAVING', () => {
     const qb = new QueryBuilder(Photos, {
       page: 1,
@@ -504,6 +533,70 @@ describe('Test Query Builder', () => {
     
     const query = qb.getQuery();
     expect(query).toEqual(QueryList.HAVING);
+  });
+  it('should get a query by getSql', () => {
+    const qb = new QueryBuilder(User, {
+      page: 1,
+      limit: 10,
+    }, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.name', 'name'],
+      ['t2.url', 'url'],
+    ).leftJoin(
+      e => e.photos,
+      't2',
+      j => j.andWhere(
+        e => e.isDeleted,
+        w => w.isFalse(),
+      ),
+    );
+    
+    const query = qb.getSql();
+    expect(query).toEqual(QueryList.LEFT_JOIN);
+  });
+  it('should get data by exec', async () => {
+    const qb = new QueryBuilder(User, {
+      page: 1,
+      limit: 10,
+    }, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.username', 'username'],
+    )
+    .setLocking('pessimistic_read');
+    
+    const data = await qb.exec();
+    expect(isArray(data)).toBeTruthy();
+  });
+  it('should get data by exec with optimistic locking', () => {
+    const qb = new QueryBuilder(User, {
+      page: 1,
+      limit: 10,
+    }, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.username', 'username'],
+    )
+    .setLocking('optimistic', 12);
+    
+    const query = qb.getQuery();
+    expect(query).toEqual(`SELECT "t1"."id" AS "id", "t1"."username" AS "username" FROM "public"."ptc_users" "t1"`);
+  });
+  it('should get an error when version number does not provided when optimistic locking', async () => {
+    try {
+      const qb = new QueryBuilder(User, {
+        page: 1,
+        limit: 10,
+      }, 't1')
+      .selectRaw(
+        ['t1.id', 'id'],
+        ['t1.username', 'username'],
+      )
+      .setLocking('optimistic');
+    } catch (error) {
+      expect(error.message).toEqual(`Version is not provided for optimistic locking`);
+    }
   });
   it('should get a query with LEFT JOIN', () => {
     const qb = new QueryBuilder(User, {
@@ -667,6 +760,64 @@ describe('Test Query Builder', () => {
     const query = qb.getQuery();
     expect(query).toEqual(QueryList.GROUP_BY);
   });
+  it('should get an error when query with GROUP BY but property selector does not provided', () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(
+        ['t1.id', 'id'],
+        ['t1.name', 'name'],
+      ).groupBy();
+      
+      const query = qb.getQuery();
+    } catch (error) {
+      expect(error.message).toEqual(`Property selector is required in groupBy`);
+    }
+  });
+  it('should get a query with Multiple GROUP BY', () => {
+    const qb = new QueryBuilder(User, {}, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.name', 'name'],
+    ).groupBy(
+      e => e.id,
+      e => e.name,
+    );
+    
+    const query = qb.getQuery();
+    expect(query).toEqual(QueryList.MULTI_GROUP_BY);
+  });
+  it('should get an error when query with GROUP BY but property selector are duplicated', () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(
+        ['t1.id', 'id'],
+        ['t1.name', 'name'],
+      ).groupBy(
+        e => e.name,
+        e => e.name,
+      );
+      
+      const query = qb.getQuery();
+    } catch (error) {
+      expect(error.message).toEqual(`Fields have to be unique in groupBy`);
+    }
+  });
+  it('should get an error when query with GROUP BY but property selector are duplicated with string props', () => {
+    try {
+      const qb = new QueryBuilder(User, {}, 't1')
+      .selectRaw(
+        ['t1.id', 'id'],
+        ['t1.name', 'name'],
+      ).groupBy(
+        't1.name',
+        't1.name',
+      );
+      
+      const query = qb.getQuery();
+    } catch (error) {
+      expect(error.message).toEqual(`Fields have to be unique in groupBy`);
+    }
+  });
   it('should get a query with sub query in SELECT', () => {
     const qb = new QueryBuilder(User, {}, 't1')
     .selectRaw(
@@ -706,10 +857,6 @@ describe('Test Query Builder', () => {
     ).innerJoin(
       e => e.photos,
       't2',
-      j => j.andWhere(
-        e => e.isDeleted,
-        w => w.isFalse(),
-      ),
     ).andWhere(
       e => e.username,
       (w, subQuery) => {
@@ -743,7 +890,7 @@ describe('Test Query Builder', () => {
     const query = qb.getQuery();
     expect(query).toEqual(QueryList.WHERE_SUB_QUERY);
   });
-  it('should get a query with sub query in JOIN', () => {
+  it('should get a query with sub query in INNER JOIN with condition', () => {
     const qb = new QueryBuilder(User, {
       page: 1,
       limit: 10,
@@ -774,9 +921,214 @@ describe('Test Query Builder', () => {
     );
     
     const query = qb.getQuery();
-    expect(query).toEqual(QueryList.JOIN_SUB_QUERY);
+    expect(query).toEqual(QueryList.INNER_JOIN_SUB_QUERY_WITH_CONDITION);
   });
-  // it('should get a query with Aggregate Function (COUNT, MAX, MIN, AVG, and SUM)', async () => {
-    // TODO: Create temporary table and drop it after test aggregate function
-  // });
+  it('should get a query with sub query in INNER JOIN without condition', () => {
+    const qb = new QueryBuilder(User, {
+      page: 1,
+      limit: 10,
+    }, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.name', 'name'],
+      ['t2.branchName', 'branch'],
+    )
+    .innerJoinSubQuery(
+      subQuery => {
+        return subQuery
+          .selectRaw(
+            ['branch.user_id', 'userId'],
+            ['branch.branch_name', 'branchName'],
+          )
+          .from(Branch, 'branch')
+          .andWhere(
+            e => e.isDeleted,
+            w => w.isFalse(),
+          )
+      },
+      't2',
+    );
+    
+    const query = qb.getQuery();
+    expect(query).toEqual(QueryList.INNER_JOIN_SUB_QUERY);
+  });
+  it('should get a query with sub query in LEFT JOIN without condition', () => {
+    const qb = new QueryBuilder(User, {
+      page: 1,
+      limit: 10,
+    }, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.name', 'name'],
+      ['t2.branchName', 'branch'],
+    )
+    .leftJoinSubQuery(
+      subQuery => {
+        return subQuery
+          .selectRaw(
+            ['branch.user_id', 'userId'],
+            ['branch.branch_name', 'branchName'],
+          )
+          .from(Branch, 'branch')
+          .andWhere(
+            e => e.isDeleted,
+            w => w.isFalse(),
+          )
+      },
+      't2',
+    );
+    
+    const query = qb.getQuery();
+    expect(query).toEqual(QueryList.LEFT_JOIN_SUB_QUERY_WITHOUT_CONDITION);
+  });
+  it('should get a query with sub query in LEFT JOIN', () => {
+    const qb = new QueryBuilder(User, {
+      page: 1,
+      limit: 10,
+    }, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.name', 'name'],
+      ['t2.branchName', 'branch'],
+    )
+    .leftJoinSubQuery(
+      subQuery => {
+        return subQuery
+          .selectRaw(
+            ['branch.user_id', 'userId'],
+            ['branch.is_deleted', 'isDeleted'],
+            ['branch.branch_name', 'branchName'],
+          )
+          .from(Branch, 'branch')
+          .andWhere(
+            e => e.isDeleted,
+            w => w.isFalse(),
+          )
+      },
+      't2',
+      j => j.andWhere(
+        't2.userId',
+        w => w.equalsWithField('t1.id'),
+      ).andWhere(
+        't2.isDeleted',
+        w => w.isFalse(),
+      )
+    );
+    
+    const query = qb.getQuery();
+    expect(query).toEqual(QueryList.LEFT_JOIN_SUB_QUERY);
+  });
+  it('should get a type of number for Aggregate Function (COUNT, MAX, MIN, AVG, and SUM)', async () => {
+    const qb = new QueryBuilder(User, {}, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+      ['t1.username', 'username'],
+    );
+    
+    const count = await qb.getCount();
+    expect(isNum(count)).toBeTruthy();
+
+    const max = await qb.getMax(e => e.point);
+    expect(isNum(max)).toBeTruthy();
+
+    const maxString = await qb.getMax('t1.point');
+    expect(isNum(maxString)).toBeTruthy();
+
+    try {
+      await qb.getMax('t1.id');
+    } catch (error) {
+      expect(error.message).toEqual(`Type of id field is uuid not assignable to type number in MAX method. Please provide only numeric type field.`);
+    }
+
+    try {
+      await qb.getMax('');
+    } catch (error) {
+      expect(error.message).toEqual(`Property Selector not provided.`);
+    }
+
+    try {
+      await qb.getManyMax();
+    } catch (error) {
+      expect(error.message).toEqual(`Property selector is required in getManyMax`);
+    }
+
+    try {
+      await qb.getManyMax('t1.point', 't1.point');
+    } catch (error) {
+      expect(error.message).toEqual(`Fields have to be unique in getManyMax`);
+    }
+
+    const manyMax = await qb.getManyMax(e => e.point, e => e.follower, e => e.following);
+    expect(
+      isNum(manyMax && manyMax.pointMax)
+      && isNum(manyMax && manyMax.followerMax)
+      && isNum(manyMax && manyMax.followingMax)
+    ).toBeTruthy();
+
+    const min = await qb.getMin(e => e.point);
+    expect(isNum(min)).toBeTruthy();
+
+    try {
+      await qb.getManyMin();
+    } catch (error) {
+      expect(error.message).toEqual(`Property selector is required in getManyMin`);
+    }
+
+    try {
+      await qb.getManyMin('t1.point', 't1.point');
+    } catch (error) {
+      expect(error.message).toEqual(`Fields have to be unique in getManyMin`);
+    }
+
+    const manyMin = await qb.getManyMin(e => e.point, e => e.follower);
+    expect(isNum(manyMin && manyMin.pointMin) && isNum(manyMin && manyMin.followerMin)).toBeTruthy();
+
+    const avg = await qb.getAverage(e => e.point);
+    expect(isNum(avg)).toBeTruthy();
+
+    try {
+      await qb.getManyAverage();
+    } catch (error) {
+      expect(error.message).toEqual(`Property selector is required in getManyAverage`);
+    }
+
+    try {
+      await qb.getManyAverage('t1.point', 't1.point');
+    } catch (error) {
+      expect(error.message).toEqual(`Fields have to be unique in getManyAverage`);
+    }
+
+    const manyAvg = await qb.getManyAverage(e => e.point, e => e.follower);
+    expect(isNum(manyAvg && manyAvg.pointAvg) && isNum(manyAvg && manyAvg.followerAvg)).toBeTruthy();
+
+    const sum = await qb.getSum(e => e.point);
+    expect(isNum(sum)).toBeTruthy();
+
+    try {
+      await qb.getManySum();
+    } catch (error) {
+      expect(error.message).toEqual(`Property selector is required in getManySum`);
+    }
+
+    try {
+      await qb.getManySum('t1.point', 't1.point');
+    } catch (error) {
+      expect(error.message).toEqual(`Fields have to be unique in getManySum`);
+    }
+
+    const manySum = await qb.getManySum(e => e.point, e => e.follower);
+    expect(isNum(manySum && manySum.pointSum) && isNum(manySum && manySum.followerSum)).toBeTruthy();
+  });
+  it('should get a type of number for Aggregate Function with deep relation', async () => {
+    const qb = new QueryBuilder(Branch, {}, 't1')
+    .selectRaw(
+      ['t1.id', 'id'],
+    ).leftJoin(
+      e => e.user,
+      't2',
+    );
+
+    const manySum = await qb.getManySum(e => e.user.point);
+    expect(isNum(manySum && manySum.pointSum)).toBeTruthy();
+  });
 });

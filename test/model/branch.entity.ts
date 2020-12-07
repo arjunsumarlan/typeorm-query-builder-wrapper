@@ -25,7 +25,13 @@ export class Branch extends BaseEntity {
   })
   branchName: string;
 
+  @Column('numeric', {
+    nullable: false,
+    name: 'branch_code',
+  })
+  branchCode: number;
+
   @OneToOne(() => User)
-  @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
+  @JoinColumn({ name: 'user_id', referencedColumnName: 'id' })
   user: User;
 }
