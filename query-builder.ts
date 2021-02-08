@@ -1,5 +1,6 @@
 import { mapKeys, snakeCase } from 'lodash';
 import { createQueryBuilder, SelectQueryBuilder } from 'typeorm';
+import { Constructor } from './types/typings';
 import { FilterHelper, QueryConditionService } from './utils/filter.helper';
 import { isNum, isUniqueFields } from './utils/common.helper';
 import { isArray, isString } from 'class-validator';
