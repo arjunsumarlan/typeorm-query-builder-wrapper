@@ -1,3 +1,5 @@
+import { ExtractObjectType } from '../types/typings';
+
 export type QueryPropType = string | number | boolean | Object;
 export type QueryComparableProp = string | number | boolean | Date;
 
